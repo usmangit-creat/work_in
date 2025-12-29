@@ -145,7 +145,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-
+///chafe
   // --- Helper: TextField Widget ---
   Widget _buildTextField({required String hintText, bool isPassword = false, bool isObscure = false, bool isNumber = false, VoidCallback? onToggleVisibility}) {
     return Container(
