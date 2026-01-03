@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'onboarding_screen.dart'; // Ensure ye import sahi ho
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -12,15 +11,25 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
 
+  // --- VARIABLES ---
   late AnimationController _controller;
   late Animation<double> _opacity;
   late Animation<double> _scale;
+  Timer? _timer; // Timer variable taake hum isay cancel kar sakein
 
   @override
   void initState() {
     super.initState();
 
-    // Logo animation controller
+    // 1. Setup Animations
+    _setupAnimations();
+
+    // 2. Start Navigation Timer
+    _timer = Timer(const Duration(seconds: 3), _navigateToNextScreen);
+  }
+
+  // --- LOGIC: Setup Animations ---
+  void _setupAnimations() {
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -36,31 +45,36 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+  }
 
-    // --- NAVIGATION LOGIC UPDATED HERE ---
-    Timer(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          // Kitni dair mein screen change ho (800ms = Smooth)
-          transitionDuration: const Duration(milliseconds: 800),
+  // --- LOGIC: Navigation ---
+  void _navigateToNextScreen() {
+    // Check mounted: Agar user app band kar chuka ho to navigate na kare (Crash fix)
+    if (!mounted) return;
 
-          pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        // Transition Duration (Smoothness)
+        transitionDuration: const Duration(milliseconds: 800),
 
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Fade Transition Logic
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-        ),
-      );
-    });
+        // Target Screen
+        pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+
+        // Fade Animation
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _timer?.cancel(); // Important: Timer stop karna zaroori hai
+    _controller.dispose(); // Memory free karna
     super.dispose();
   }
 
@@ -76,12 +90,19 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // --- Logo ---
                 Image.asset(
-                  'assets/logo.png', // Logo asset check kar lein
+                  'assets/logo.png',
                   width: 160,
                   height: 160,
+                  // Smooth loading check
+                  errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.broken_image, size: 80, color: Colors.grey),
                 ),
-                const SizedBox(height: 2),
+
+                const SizedBox(height: 10), // Spacing thoda barha diya
+
+                // --- Brand Name ---
                 const Text(
                   'WorkIn',
                   style: TextStyle(

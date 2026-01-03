@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'signup_screen.dart'; // Import zaroori hai
+import 'signup_screen.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -9,7 +9,25 @@ class RoleSelectionScreen extends StatefulWidget {
 }
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
+  // --- State Variable ---
+  // -1: None, 0: Client, 1: Worker
   int _selectedRole = -1;
+
+  // --- Constants ---
+  final Color _primaryColor = const Color(0xFF2C43A8);
+  final Color _accentColor = const Color(0xFFFF6B00);
+
+  // --- Logic: Navigation ---
+  void _handleContinue() {
+    String roleToSend = _selectedRole == 0 ? 'Client' : 'Worker';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SignupScreen(userRole: roleToSend),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +39,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           child: Column(
             children: [
               const SizedBox(height: 50),
+
+              // --- Header ---
               const Text(
                 'Choose your role',
                 style: TextStyle(
@@ -32,53 +52,38 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               ),
               const SizedBox(height: 70),
 
-              // -------- Card 1: Client --------
-              _buildSpecCard(
-                index: 0,
+              // --- Card 1: Client ---
+              RoleCard(
                 title: 'I need a service',
-                imageAsset: 'assets/role_client.png',
+                imageAsset: 'assets/User.png',
                 isActive: _selectedRole == 0,
                 isImageLeft: true,
+                activeColor: _accentColor,
+                onTap: () => setState(() => _selectedRole = 0),
               ),
 
               const SizedBox(height: 30),
 
-              // -------- Card 2: Worker --------
-              _buildSpecCard(
-                index: 1,
+              // --- Card 2: Worker ---
+              RoleCard(
                 title: 'I want to Work',
-                imageAsset: 'assets/role_worker.png',
+                imageAsset: 'assets/Worker.png',
                 isActive: _selectedRole == 1,
                 isImageLeft: false,
+                activeColor: _accentColor,
+                onTap: () => setState(() => _selectedRole = 1),
               ),
 
               const Spacer(),
 
-              // -------- Continue Button --------
+              // --- Continue Button ---
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _selectedRole == -1
-                      ? null
-                      : () {
-                    // Check Role
-                    String roleToSend =
-                    _selectedRole == 0 ? 'Client' : 'Worker';
-
-                    // Navigate to Signup with Role
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SignupScreen(
-                          userRole: roleToSend,
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: _selectedRole == -1 ? null : _handleContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2C43A8),
-                    disabledBackgroundColor:
-                    const Color(0xFF2C43A8).withOpacity(0.5),
+                    backgroundColor: _primaryColor,
+                    disabledBackgroundColor: _primaryColor.withOpacity(0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -110,30 +115,42 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       ),
     );
   }
+}
 
-  // --- Card Widget (Image Inside Box + Border Overlay) ---
-  Widget _buildSpecCard({
-    required int index,
-    required String title,
-    required String imageAsset,
-    required bool isActive,
-    required bool isImageLeft,
-  }) {
+// ============================================================
+// EXTRACTED WIDGET:
+// ============================================================
+class RoleCard extends StatelessWidget {
+  final String title;
+  final String imageAsset;
+  final bool isActive;
+  final bool isImageLeft;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const RoleCard({
+    super.key,
+    required this.title,
+    required this.imageAsset,
+    required this.isActive,
+    required this.isImageLeft,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     const double cardHeight = 100;
-    final borderColor = isActive ? const Color(0xFFFF6B00) : Colors.transparent;
+    final borderColor = isActive ? activeColor : Colors.transparent;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedRole = index;
-        });
-      },
+      onTap: onTap,
       child: SizedBox(
         height: cardHeight,
         width: double.infinity,
         child: Stack(
           children: [
-            // Layer 1: Content
+            // Layer 1: Content Box
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -150,6 +167,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: Stack(
                   children: [
+                    // Image Position logic
                     Positioned(
                       bottom: 0,
                       left: isImageLeft ? 10 : null,
@@ -160,10 +178,22 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         width: 120,
                         fit: BoxFit.contain,
                         alignment: Alignment.bottomCenter,
-                        filterQuality: FilterQuality.high,
-                        isAntiAlias: true,
+                        filterQuality: FilterQuality.medium, // Optimized
+                        cacheWidth: 300, // Memory Optimization
+
+                        // Smooth Loading
+                        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                          if (wasSynchronouslyLoaded) return child;
+                          return AnimatedOpacity(
+                            opacity: frame == null ? 0 : 1,
+                            duration: const Duration(milliseconds: 300),
+                            child: child,
+                          );
+                        },
                       ),
                     ),
+
+                    // Text Position logic
                     Align(
                       alignment: isImageLeft
                           ? Alignment.centerRight
@@ -190,8 +220,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 ),
               ),
             ),
-            // Layer 2: Border
-            Container(
+
+            // Layer 2: Animated Border Overlay
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: borderColor, width: 2),
