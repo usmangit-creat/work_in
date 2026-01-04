@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "435210335416",
+    "project_id": "workin-e7be9",
+    "storage_bucket": "workin-e7be9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435210335416:android:718b6ff089f3da7434704d",
+        "android_client_info": {
+          "package_name": "com.example.work_in"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD21FmJH-BXYEszwqxd-2Z10QVtUg5apJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
+// --- 1. Firebase Imports (Zaroori hain) ---
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // Ye file flutterfire configure se bani thi
+
 // App start hone ke baad sabse pehle ye screen aayegi
 import 'screens/splash_screen.dart';
 
-void main() {
+// --- 2. Main Function ko 'async' banaya taake Firebase wait kar sake ---
+void main() async {
+  // Native code (Android/iOS) ko Flutter se baat karne ke liye ready karna
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase ko start karna (Generated options ke sath)
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Jab connect ho jaye, tab App run karein
   runApp(const MyApp());
 }
 
@@ -17,37 +31,36 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // --- 1. App Basic Config ---
+      // --- App Basic Config ---
       debugShowCheckedModeBanner: false, // Debug tag hataya
       title: 'WorkIn', // App ka naam
 
-      // --- 2. Global Theme (Design System) ---
+      // --- Global Theme (Design System) ---
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Poppins', // Puri App ka default Font 'Poppins' kar diya
+        fontFamily: 'Poppins', // Puri App ka default Font 'Poppins'
 
         // App ke Main Colors (Blue & Orange)
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2C43A8), // Hamara main Blue color
+          seedColor: const Color(0xFF2C43A8), // Main Blue
           primary: const Color(0xFF2C43A8),
-          secondary: const Color(0xFFFF6B00), // Hamara Orange color
+          secondary: const Color(0xFFFF6B00), // Orange
           background: Colors.white,
         ),
 
-        // Scaffold ka background color (Light Grey jo hum use kar rahe hain)
+        // Scaffold ka background color
         scaffoldBackgroundColor: const Color(0xFFF7F8FA),
 
         // AppBar ki default styling
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent, // Material 3 tint hatane ke liye
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
           iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
 
-      // --- 3. Entry Point ---
-      // App khulte hi Splash Screen dikhaye
+      // --- Entry Point ---
       home: const SplashScreen(),
     );
   }

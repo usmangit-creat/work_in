@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 // --- IMPORTS ---
+import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'client_home_screen.dart';
 import 'worker_home_screen.dart';
@@ -17,26 +18,85 @@ class _SignupScreenState extends State<SignupScreen> {
   // --- STATE VARIABLES ---
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
   String _selectedGender = 'Male';
 
-  // --- CONTROLLERS (Data lene ke liye) ---
+  // --- CONTROLLERS ---
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // --- CONSTANTS ---
+  // --- COLORS ---
   final Color _primaryColor = const Color(0xFF2C43A8);
   final Color _bgColor = const Color(0xFFF7F8FA);
 
   @override
   void dispose() {
-    // Memory leak rokne ke liye controllers dispose karna zaroori hai
     _nameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // ============================================================
+  // LOGIC: HANDLE SIGNUP (With Verification)
+  // ============================================================
+  void _handleSignup() async {
+    // 1. Validation
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match!")));
+      return;
+    }
+
+    setState(() { _isLoading = true; });
+
+    // 2. Call Backend
+    String res = await AuthService().signUpUser(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      role: widget.userRole,
+      gender: _selectedGender,
+    );
+
+    setState(() { _isLoading = false; });
+
+    // 3. Handle Result
+    if (res == "success") {
+      // Success: Show Dialog telling user to verify email
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Verification Sent"),
+          content: const Text("We have sent an email to your address. Please click the link in that email to verify your account, then Login."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Dialog band karein aur Login screen par le jayen
+                Navigator.pop(context); // Close dialog
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res)));
+    }
   }
 
   @override
@@ -46,7 +106,7 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // --- 1. Back Button AppBar ---
+            // --- 1. Back Button ---
             SliverAppBar(
               backgroundColor: _bgColor,
               elevation: 0,
@@ -57,25 +117,17 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
 
-            // --- 2. Main Body ---
+            // --- 2. Main Content ---
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    // --- HEADER SECTION ---
                     _buildHeader(),
-
                     const SizedBox(height: 30),
-
-                    // --- FORM SECTION ---
                     _buildForm(),
-
                     const SizedBox(height: 40),
-
-                    // --- FOOTER SECTION (Button & Link) ---
                     _buildFooter(),
-
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -88,8 +140,9 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // ============================================================
-  // SECTION 1: HEADER (Logo & Title)
+  // WIDGET HELPER METHODS
   // ============================================================
+
   Widget _buildHeader() {
     return Column(
       children: [
@@ -102,8 +155,6 @@ class _SignupScreenState extends State<SignupScreen> {
           const Icon(Icons.broken_image, size: 80, color: Colors.grey),
         ),
         const SizedBox(height: 20),
-
-        // Dynamic Title based on Role
         Text(
           widget.userRole == 'Worker' ? 'Join as a Worker' : 'Find a Service',
           style: const TextStyle(
@@ -122,13 +173,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ============================================================
-  // SECTION 2: FORM FIELDS
-  // ============================================================
   Widget _buildForm() {
     return Column(
       children: [
-        // 1. Name
         _buildLabel('Name'),
         _buildTextField(
           controller: _nameController,
@@ -138,7 +185,15 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 2. Phone
+        _buildLabel('Email Address'),
+        _buildTextField(
+          controller: _emailController,
+          hintText: 'Enter your email',
+          inputType: TextInputType.emailAddress,
+          action: TextInputAction.next,
+        ),
+        const SizedBox(height: 16),
+
         _buildLabel('Phone no.'),
         _buildTextField(
           controller: _phoneController,
@@ -148,31 +203,30 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 3. Password
         _buildLabel('New Password'),
         _buildTextField(
           controller: _passwordController,
           hintText: 'Password',
           isPassword: true,
           isObscure: _obscurePassword,
-          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+          onToggleVisibility: () =>
+              setState(() => _obscurePassword = !_obscurePassword),
           action: TextInputAction.next,
         ),
         const SizedBox(height: 16),
 
-        // 4. Confirm Password
         _buildLabel('Confirm Password'),
         _buildTextField(
           controller: _confirmPasswordController,
           hintText: 'Confirm Password',
           isPassword: true,
           isObscure: _obscureConfirmPassword,
-          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+          onToggleVisibility: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword),
           action: TextInputAction.done,
         ),
         const SizedBox(height: 16),
 
-        // 5. Gender Selection
         Row(
           children: [
             const Text(
@@ -189,24 +243,28 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ============================================================
-  // SECTION 3: FOOTER (Button & Login Link)
-  // ============================================================
   Widget _buildFooter() {
     return Column(
       children: [
-        // Sign Up Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _handleSignup,
+            onPressed: _isLoading ? null : _handleSignup,
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
               elevation: 0,
             ),
-            child: const Text(
+            child: _isLoading
+                ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                  color: Colors.white, strokeWidth: 2),
+            )
+                : const Text(
               'Sign Up',
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -217,16 +275,19 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ),
-
         const SizedBox(height: 20),
-
-        // Login Link
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Already have an account? ", style: TextStyle(fontFamily: 'Poppins', color: Colors.grey)),
+            const Text(
+              "Already have an account? ",
+              style: TextStyle(fontFamily: 'Poppins', color: Colors.grey),
+            ),
             GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              ),
               child: Text(
                 'Login',
                 style: TextStyle(
@@ -241,31 +302,6 @@ class _SignupScreenState extends State<SignupScreen> {
       ],
     );
   }
-
-  // ============================================================
-  // LOGIC: SIGNUP HANDLER
-  // ============================================================
-  void _handleSignup() {
-    // Future: Add Validation here (e.g. check if name is empty)
-
-    if (widget.userRole == 'Worker') {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const WorkerHomeScreen()),
-            (route) => false,
-      );
-    } else {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const ClientHomeScreen()),
-            (route) => false,
-      );
-    }
-  }
-
-  // ============================================================
-  // HELPER WIDGETS
-  // ============================================================
 
   Widget _buildLabel(String text) {
     return Align(
@@ -298,7 +334,6 @@ class _SignupScreenState extends State<SignupScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        // Subtle Shadow
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -315,7 +350,8 @@ class _SignupScreenState extends State<SignupScreen> {
         style: const TextStyle(fontFamily: 'Poppins'),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(fontFamily: 'Poppins', color: Colors.black38),
+          hintStyle:
+          const TextStyle(fontFamily: 'Poppins', color: Colors.black38),
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -325,7 +361,9 @@ class _SignupScreenState extends State<SignupScreen> {
           suffixIcon: isPassword
               ? IconButton(
             icon: Icon(
-              isObscure ? Icons.visibility_off_outlined : Icons.remove_red_eye_outlined,
+              isObscure
+                  ? Icons.visibility_off_outlined
+                  : Icons.remove_red_eye_outlined,
               color: Colors.grey,
             ),
             onPressed: onToggleVisibility,
